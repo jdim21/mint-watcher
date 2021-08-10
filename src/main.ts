@@ -123,6 +123,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   setInterval(getLatestSignatures, signaturesIntervalTime);
   setInterval(checkForMints, checkMintsIntervalTime);
+  app.enableCors();
   await app.listen(3000);
 }
 bootstrap();
