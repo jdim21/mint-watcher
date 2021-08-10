@@ -4,7 +4,8 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { pool } from './database';
 
 const solanaNetworkAddress = 'https://api.mainnet-beta.solana.com';
-const jAddy1 = 'Hr31mmEsjg6eqZFGHZWtCcv7msrz9ZqTkHF5Gp2BmdGV';
+const jAddy1 = '78rgjb8CGDqkEetsKQXJ6xo3LGW7Lk1sZeK3uvjLGCva';
+const expectedLamports = 500000000;
 const checkMintsIntervalTime = 2000;
 const signaturesIntervalTime = 5000;
 
@@ -76,27 +77,32 @@ async function checkForMints() {
               console.log("Error updating signature checked in DB: " + e);
             }
             if (resp.transaction.message.accountKeys.length == 3) {
-              resp.transaction.message.accountKeys.forEach(async account => {
-                  if (account.toString() != "11111111111111111111111111111111" &&
-                      account.toString() != jAddy1) {
-                    try {
-                      const insertMintQuery = {
-                        name: 'insert-mint',
-                        text: `
-                            INSERT INTO public.mint_txns
-                            (from_address, signature, minted, seen)
-                            VALUES($1, $2, $3, $4) ON CONFLICT (from_address, signature) DO NOTHING;
-                          `,
-                        values: [account.toString(), sig.signature, false, new Date().toISOString()]
+
+              if (resp.meta.postBalances.length >= 2) {
+                if (Math.abs(resp.meta.postBalances[1] - resp.meta.preBalances[1]) == expectedLamports) {
+                  resp.transaction.message.accountKeys.forEach(async account => {
+                      if (account.toString() != "11111111111111111111111111111111" &&
+                          account.toString() != jAddy1) {
+                        try {
+                          const insertMintQuery = {
+                            name: 'insert-mint',
+                            text: `
+                                INSERT INTO public.mint_txns
+                                (from_address, signature, minted, seen)
+                                VALUES($1, $2, $3, $4) ON CONFLICT (from_address, signature) DO NOTHING;
+                              `,
+                            values: [account.toString(), sig.signature, false, new Date().toISOString()]
+                          }
+                          await pool.query(insertMintQuery).catch((e: any) => {
+                            console.log("Error during mint transaction query: " + e);
+                          });
+                        } catch (e) {
+                          console.log("Error writing mint transaction to DB: " + e);
+                        }
                       }
-                      await pool.query(insertMintQuery).catch((e: any) => {
-                        console.log("Error during mint transaction query: " + e);
-                      });
-                    } catch (e) {
-                      console.log("Error writing mint transaction to DB: " + e);
-                    }
-                  }
-              })
+                  })
+                }
+              }
             }
           }).catch((e: any) => {
             console.log("Error getting txn for signature " + sig.signature + ": " + e);
