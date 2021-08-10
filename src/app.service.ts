@@ -20,6 +20,9 @@ export class AppService {
         });
         const remaining = 17576 - parseInt(res.rows[0]["count"]);
         client.release();
+        if (remaining <= 0) {
+          return "SoldOut";
+        }
         return remaining;
       } catch (e) {
         console.log("Exception selecting mints from DB: " + e);
