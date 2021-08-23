@@ -9,4 +9,9 @@ export class AppController {
   async getHello(): Promise<string> {
     return await this.appService.getHello();
   }
+
+  @Get('token-list')
+  async getTokenList(): Promise<string> {
+    return await this.appService.getTokenList();
+  }
 }

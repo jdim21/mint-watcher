@@ -4,8 +4,8 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { pool } from './database';
 
 const solanaNetworkAddress = 'https://api.mainnet-beta.solana.com';
-const jAddy1 = 'HKZCorbtYXUVQ5A47VhNHruEuYGj1Du8fdvY9gqx3Ya';
-const expectedLamports = 500000000;
+const jAddy1 = '55fXB8EJLWeYgdAbpSGyoWKLpZXpjrLGf8VYofwNp2KB';
+const expectedLamports = 1250000000;
 const checkMintsIntervalTime = 2000;
 const signaturesIntervalTime = 5000;
 
