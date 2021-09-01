@@ -5,6 +5,8 @@ import { pool } from './database';
 import * as fs from "fs";
 import { strict } from 'assert/strict';
 import { mintList } from './mintList';
+import { mintAndMetaList } from './mintAndMetaList';
+import axios, { AxiosResponse } from 'axios';
 
 const solanaNetworkAddress = 'https://solana-api.projectserum.com';
 // const solanaNetworkAddress = 'https://api.mainnet-beta.solana.com';
@@ -15,6 +17,39 @@ const checkMintsIntervalTime = 2000;
 const signaturesIntervalTime = 5000;
 const checkValidSales = 2000;
 const saleSignaturesIntervalTime = 5000;
+
+async function uploadMintAndImageUris() {
+  pool.connect().then(async (client) => {
+    mintAndMetaList.forEach(async mintAndMetaUri => {
+      // console.log("mintAndMetaUri: " + JSON.stringify(mintAndMetaUri));
+      // var mintAndMetaUri = mintAndMetaList[0];
+      // console.log("meta uri: " + mintAndMetaUri["uri"]);
+
+      let result: AxiosResponse = await axios.get(mintAndMetaUri["uri"]);
+      // console.log("result: " + JSON.stringify(result.data));
+      console.log("image uri: " + result.data.image);
+      try {
+        const insertMintAndImageUriQuery = {
+          name: 'insert-mint-and-image-uri',
+          text: `
+              INSERT INTO public.mint_image_uris
+              (mint, image_uri)
+              VALUES($1, $2) ON CONFLICT (mint) DO NOTHING;
+            `,
+          values: [mintAndMetaUri["mint"], result.data.image]
+        }
+        await pool.query(insertMintAndImageUriQuery).catch((e: any) => {
+          console.log("Error during mint and image uri query: " + e);
+        });
+      } catch (e) {
+        console.log("Error writing signature to DB: " + e);
+      }
+    });
+    client.release();
+  }).catch((e: any) => {
+    console.log("Error connecting: " + e);
+  });
+}
 
 async function getLatestSignatures() {
   pool.connect().then(async (client) => {
@@ -230,25 +265,27 @@ function writeSaleToDatabase(signature, resp) {
   }
   pool.connect().then(async (client) => {
     var uri = "unknown";
-    //if (mint != "unknown") {
-    //  try {
-    //    var signatures;
-    //    const getUriQuery = {
-    //      name: 'get-mint-uri',
-    //      text: `
-    //          SELECT uri FROM public.mints
-    //          WHERE created_at = $1
-    //        `,
-    //      values: [mint]
-    //    }
-    //    signatures = await pool.query(getUriQuery).catch((e: any) => {
-    //      console.log("Error getting latest signatures query: " + e);
-    //    });
-    //  } catch (e) {
-    //    console.log("Error getting mint URI from DB: " + e);
-    //  }
+    if (mint != "unknown") {
+     try {
+       var signatures;
+       const getUriQuery = {
+         name: 'get-mint-uri',
+         text: `
+             SELECT mint, image_uri FROM public.mint_image_uris
+             WHERE mint = $1
+           `,
+         values: [mint]
+       }
+       signatures = await pool.query(getUriQuery).then(res => {
+         uri = res.rows[0]["image_uri"];
+       }).catch((e: any) => {
+         console.log("Error getting mint image uri query: " + e);
+       });
+     } catch (e) {
+       console.log("Error getting mint URI from DB: " + e);
+     }
 
-    //}
+    }
     try {
       const insertSigQuery = {
         name: 'insert-sales-txn',
@@ -337,6 +374,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // setInterval(getLatestSignatures, signaturesIntervalTime);
   // setInterval(checkForMints, checkMintsIntervalTime);
+  // uploadMintAndImageUris();
   setInterval(getLatestSaleSignatures, saleSignaturesIntervalTime);
   setInterval(checkForValidSales, checkValidSales);
   app.enableCors();
