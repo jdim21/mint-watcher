@@ -8,8 +8,8 @@ import { mintList } from './mintList';
 import { mintAndMetaList } from './mintAndMetaList';
 import axios, { AxiosResponse } from 'axios';
 
-const solanaNetworkAddress = 'https://solana-api.projectserum.com';
-// const solanaNetworkAddress = 'https://api.mainnet-beta.solana.com';
+// const solanaNetworkAddress = 'https://solana-api.projectserum.com';
+const solanaNetworkAddress = 'https://api.mainnet-beta.solana.com';
 const jAddy1 = '55fXB8EJLWeYgdAbpSGyoWKLpZXpjrLGf8VYofwNp2KB';
 const dogeDevAddress = 'HwMBMB6QpPJNyFnbVtt2UKVmJQPGnKKsMfaxNUyWahmc';
 const expectedLamports = 1250000000;
@@ -166,7 +166,7 @@ async function getLatestSaleSignatures() {
   pool.connect().then(async (client) => {
     let connection = new Connection(solanaNetworkAddress);
     let watchedAddress = new PublicKey(dogeDevAddress);
-      connection.getSignaturesForAddress(watchedAddress).then( (info) => {
+      connection.getConfirmedSignaturesForAddress2(watchedAddress).then( (info) => {
         info.forEach(async sig => {
           try {
             const insertSigQuery = {
